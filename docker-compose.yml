@@ -1,0 +1,58 @@
+version: "3.9"
+networks:
+  test_net:
+volumes:
+  pgdata:
+
+services:
+  postgredb:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: "new_db"
+      POSTGRES_USER: "admin1"
+      POSTGRES_PASSWORD: "admin1pwd"
+    ports:
+      - "5555:5432"
+    volumes:
+      - .:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+      - ./logs:/var/log
+    networks:
+      - test_net
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:5.7
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@yandex.ru"
+      PGADMIN_DEFAULT_PASSWORD: "admin1pwd"
+      PGADMIN_DEFAULT_SERVER_MODE: "False"
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - test_net
+    depends_on:
+      - postgredb
+  web:
+    build: .
+    ports:
+      - "8080:5000"
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - .:/code
+    networks:
+      - test_net
+    depends_on:
+      - postgredb
+  redis:
+    image: "redis:alpine"
+    networks:
+      - test_net
